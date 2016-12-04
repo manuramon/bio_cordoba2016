@@ -1,0 +1,2 @@
+ CHR  SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR 
+   1 snp1       1000    G   0.4333   0.2818    A        5.772      0.01628        1.949 
