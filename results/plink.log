@@ -2,9 +2,9 @@ PLINK v1.90b3k 64-bit (9 Apr 2015)
 4 arguments: --allow-no-sex --file data/assoc_01 --model
 Hostname: darwin.local
 Working directory: /Users/manuel/Documents/PROJECTS/bio_cordoba2016
-Start time: Sun Dec  4 18:27:29 2016
+Start time: Mon Dec  5 08:17:02 2016
 
-Random number seed: 1480872449
+Random number seed: 1480922222
 16384 MB RAM detected; reserving 8192 MB for main workspace.
 Scanning .ped file... done.
 Performing single-pass .bed write (1 variant, 250 people).
@@ -21,4 +21,4 @@ Calculating allele frequencies... done.
 Among remaining phenotypes, 30 are cases and 220 are controls.
 Writing --model report to plink.model ... done.
 
-End time: Sun Dec  4 18:27:29 2016
+End time: Mon Dec  5 08:17:02 2016

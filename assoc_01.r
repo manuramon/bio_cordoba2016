@@ -39,3 +39,17 @@ tab
 OR <- (tab[2,2]/tab[2,1])/(tab[1,2]/tab[1,1])
 chisq.test(tab, correct = FALSE)
 
+system("sh assoc_01.sh")
+
+library(SNPassoc)
+mySNP <- snp(snp1, sep="")
+summary(mySNP)
+ped2 <- ped[, 1:6]
+ped2$snp1 <- snp1
+pos <- map[, c(2,1,4)]
+names(pos) <- c("snp","chr","pos")
+ped2 <- setupSNP(ped2, colSNPs = 7, sep="", info = pos)
+tableHWE(ped2)
+gwas01 <- WGassociation(Phenotype ~ snp1, data=ped2)
+gwas01
+association(Phenotype ~ snp1, data=ped2)

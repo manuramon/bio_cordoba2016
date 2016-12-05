@@ -1,6 +1,6 @@
  CHR  SNP   A1   A2     TEST            AFF          UNAFF        CHISQ   DF            P
-   1 snp1    G    A     GENO        10/17/3      40/125/55           NA   NA           NA
-   1 snp1    G    A    TREND          37/23        205/235        5.569    1      0.01828
-   1 snp1    G    A  ALLELIC          37/23        205/235        4.805    1      0.02838
-   1 snp1    G    A      DOM           27/3         165/55           NA   NA           NA
-   1 snp1    G    A      REC          10/20         40/180           NA   NA           NA
+   1 snp1    G    A     GENO        10/14/6      40/126/54        3.788    2       0.1505
+   1 snp1    G    A    TREND          34/26        206/234        2.336    1       0.1264
+   1 snp1    G    A  ALLELIC          34/26        206/234        2.052    1        0.152
+   1 snp1    G    A      DOM           24/6         166/54        0.299    1       0.5845
+   1 snp1    G    A      REC          10/20         40/180        3.788    1      0.05163
