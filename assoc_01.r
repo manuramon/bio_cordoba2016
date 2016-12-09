@@ -34,13 +34,18 @@ ped$snp1b <- substr(snp1, 2, 2)
 write.table(ped, "data/assoc_01.ped",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
+#' Chisq test
 tab <- table(genotype, disease)
 tab
 OR <- (tab[2,2]/tab[2,1])/(tab[1,2]/tab[1,1])
 chisq.test(tab, correct = FALSE)
 
+
+#' With plink
 system("sh assoc_01.sh")
 
+
+#' With SNPassoc in R
 library(SNPassoc)
 mySNP <- snp(snp1, sep="")
 summary(mySNP)

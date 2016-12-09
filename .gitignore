@@ -4,3 +4,7 @@
 .Ruserdata
 .log
 .nosex
+data/snp50K
+bib/
+slides/
+Output_*
