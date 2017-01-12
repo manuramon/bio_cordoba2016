@@ -4,10 +4,10 @@
 .Ruserdata
 .log
 .nosex
-roh*
+roh.r
 data/snp50K
 data/VCF
 bib/
-slides/*
+slides/
 Output_*
 results/
