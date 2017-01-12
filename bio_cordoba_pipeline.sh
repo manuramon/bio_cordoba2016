@@ -12,7 +12,7 @@ infile="data/snp50K/Cordoba_FinalReport"
 outfile="geno_cordoba"
 breed="sheep"
 beagle_dir="bin"
-plink_dir="bin"
+bin_dir="bin"
 
 
 # HEADER
@@ -44,8 +44,7 @@ awk 'BEGIN {FS="\t"; OFS="\t"}
   # Column 4 - A1: Allele1-Top ($3)
   # Column 5 - A2: Allele2-Top ($4)
   # Column 6 - GC Score: GC.Score ($5) - NOT 
-awk 'BEGIN {FS="\t"; OFS="\t"}
-     NR>10 {print 0,$2,$1,$3,$4}' $infile.txt  > $outdir/$outfile.temp.lgen
+ 
 
 # FAM FILE
   # Column 1 - Family ID: 0 or Sample Group ($7)
@@ -73,40 +72,53 @@ rm $outdir/$outfile.temp.lgen
 
 # IMP: update map information
 # Oar_v4.0 downloaded from NPchiMp (http://bioinformatics.tecnoparco.org/SNPchimp/)
-awk -F',' 'NR>1{print $12,$11}' data/SNPchimp_oarv4_0.csv > $outdir/oar_v4_bp_positions.txt
-$plink_dir/plink_1.9_mac --noweb --sheep --lfile  $outdir/$outfile \
+awk  'BEGIN{FS=","; OFS="\t"}; NR>1{print $12,$11}' data/SNPchimp_oarv4_0.csv > $outdir/oar_v4_bp_positions.txt
+$bin_dir/plink_1.9_mac --noweb --sheep --lfile  $outdir/$outfile \
     --allow-extra-chr 0 --biallelic-only \
     --update-map $outdir/oar_v4_bp_positions.txt\
     --keep-allele-order \
-    --make-bed\
+    --make-bed \
+    --out $outdir/${outfile}_v4
+
+$bin_dir/plink_1.9_mac --noweb --sheep --lfile  $outdir/$outfile \
+    --allow-extra-chr 0 --biallelic-only \
+    --keep-allele-order \
+    --make-bed \
+    --out $outdir/${outfile}_v4
+    
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/${outfile}_v4 \
+    --make-bed \
     --out $outdir/${outfile}
 
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
-    --allow-extra-chr 0 \
-    --keep-allele-order \
-    --make-bed\
-    --out $outdir/${outfile}
+rm $outdir/${outfile}_v4*
+
+
+# transpose data
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/${outfile} \
+    --recode transpose \
+    --out $outdir/${outfile}_trans
+
 
 
 # 1st check data 
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
-    --allow-extra-chr 0 --biallelic-only \
-    --freq --missing  --het small-sample --ibc --nonfounders\
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/${outfile} \
+    --allow-extra-chr 0 \
+    --freq --missing --hardy --het small-sample --ibc --nonfounders\
     --out $outdir/${outfile}_stats
     
 # do the same but spliting aDNA
 awk '{if(substr($2,1,3)=="FOS") print $1,$2}' $outdir/${outfile}.fam > $outdir/aDNA_samples
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
     --allow-extra-chr 0 --biallelic-only \
     --keep $outdir/aDNA_samples \
-    --freq --missing  --het small-sample  --ibc --nonfounders\
+    --freq --missing --hardy --het small-sample  --ibc --nonfounders\
     --out $outdir/${outfile}_stats_aDNA
 
 awk '{if(substr($2,1,3)!="FOS") print $1,$2}' $outdir/${outfile}.fam > $outdir/rDNA_samples
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
     --allow-extra-chr 0 --biallelic-only \
     --keep $outdir/rDNA_samples \
-    --freq --missing  --het small-sample  --ibc --nonfounders\
+    --freq --missing --hardy --het small-sample  --ibc --nonfounders\
     --out $outdir/${outfile}_stats_rDNA
     
 rm ${outdir}/*.nosex
@@ -115,18 +127,24 @@ rm ${outdir}/*.log
 
 # 2nd Quality Control (QC) 
 
-# If we make QC using default thresholds with aDNA and rDNA data we will lose many SNPS
-$plink_dir/plink_1.9_mac --sheep --bfile  $outdir/$outfile \
+# If we make QC using default thresholds with aDNA and rDNA data 
+# we will lose many SNPS and also samples (see plink log)
+$bin_dir/plink_1.9_mac --sheep --bfile  $outdir/$outfile \
     --allow-extra-chr --biallelic-only \
     --geno 0.1  --mind 0.1 --maf 0.001 --missing \
     --keep-allele-order \
     --make-bed \
     --out $outdir/${outfile}_temp
 
-# IMNP: check missing data reports!!!
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
-    --allow-extra-chr --biallelic-only \
-    --geno 0.5 --mind 1 --maf 0.0001 --missing \
+# IMP: check missing data reports!!!
+# remove Chr 0, X, Y
+awk '$1==0 || $1=="CONTIG" || $1=="OAR" {print $2}' $outdir/$outfile.map > $outdir/excludeSNP
+
+# QC
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
+    --biallelic-only \
+    --geno 0.7 --mind 1 --maf 0.0001 --missing \
+    --exclude $outdir/excludeSNP \
     --keep-allele-order \
     --make-bed \
     --out $outdir/$outfile
@@ -135,7 +153,7 @@ rm $outdir/${outfile}_temp*
 
 # 3rd recode as VCF file
 
-$plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
     --allow-extra-chr 0 \
     --recode vcf \
     --out $outdir/$outfile
@@ -143,37 +161,37 @@ $plink_dir/plink_1.9_mac --noweb --sheep --bfile  $outdir/$outfile \
 # there is a row given and advise that must be deleted from VCF file
 sed '/may not be based on real reference genome/d' $outdir/$outfile.vcf > $outdir/temp.vcf
 mv $outdir/temp.vcf $outdir/$outfile.vcf
-
+# use --real-ref-alleles
 
 # Use VCFTOOLS to filter data
-vcftools --vcf $outdir/${outfile}.vcf --not-chr 0 \
-    --remove-filtered-all --remove-indels --max-alleles 2 --recode --stdout | \
-    gzip -c > $outdir/${outfile}_NOT0.vcf.gz
+vcftools --vcf $outdir/${outfile}.vcf --chr 10 \
+    --remove-filtered-all --remove-indels --max-alleles 2 \
+    --recode --stdout | \
+    gzip -c > $outdir/${outfile}_chr10.vcf.gz
+    
+vcftools --gzvcf $outdir/${outfile}_chr10.vcf.gz \
+    --freq \
+    --out $outdir/${outfile}_chr10
 
 
 # BEAGLE. Phase genotypes
 # create pedigree file to Beagle (if there are pairs ot trios)
-# awk 'BEGIN{FS=";"; OFS=" "}; NR>1{print 0,$1,$2,$3}' ../ped_25082015 > ped2bgl.txt
-
-# get reference panel from:
-# wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/sheep_9940/VCF/*.gz
-#vcftools --gzvcf vcf_chr_1.vcf.gz --remove-filtered-all --remove-indels --max-alleles 2 \
-#    --recode \
-##   --recode-INFO-all \ # to keep info
-#    --stdout | gzip -c > vcf_chr_1.recode.vcf.gz
-
-
 # perform phasing and imputing by chromosome 
+
+# $bin_dir/plink_1.9_mac --noweb --sheep \
+#     --vcf  $outdir/$outfile.vcf \
+#     --list-duplicate-vars \
+#     --out $outdir/${outfile}_repe
+    
 for chrom in {1..27}
 do
   vcftools --vcf $outdir/$outfile.vcf --chr ${chrom} \
     --remove-filtered-all --remove-indels --max-alleles 2 --recode --stdout | \
     gzip -c > $outdir/${outfile}_chr${chrom}.vcf.gz
 
-  java -Xmx${HEAP}m -jar ~/libs/beagle/beagle_v4.1.jar \
+  java -Xmx${HEAP}m -jar ~/libs/beagle/beagle_v4.0.jar \
     gt=$outdir/${outfile}_chr${chrom}.vcf.gz \
     nthreads=3 \
-    ne=200\
     out=$outdir/${outfile}_chr${chrom}_phase
   
   rm $outdir/${outfile}_chr${chrom}.vcf.gz
@@ -183,7 +201,7 @@ done
 
 # concatenate phased and imputed VCF files
 gunzip $outdir/${outfile}_chr*_phase.vcf.gz
-cp $outdir/${outfile}_chr1_phase $outdir/${outfile}_phase.vcf
+cp $outdir/${outfile}_chr1_phase.vcf $outdir/${outfile}_phase.vcf
 
 for chrom in {2..27}
 do
@@ -196,15 +214,150 @@ gzip $outdir/${outfile}_phase.vcf
 gzip $outdir/${outfile}.vcf
 
 # back to plink format. Use a2-allele from previous .bim file
-awk '{print $2,$6}' $outdir/${outfile}.bim > $outdir/a2_reference.txt
-$plink_dir/plink_1.9_mac --noweb --sheep --vcf  $outdir/${outfile}_phase.vcf.gz \
-    --recode --a2-allele a2_reference.txt --make-bed \
-    --out $outdir/${outfile}_phased
+awk '{print $2,$6}' $outdir/${outfile}.bim > ${outdir}/a2_reference.txt
+$bin_dir/plink_1.9_mac --noweb --sheep --vcf  $outdir/${outfile}_phase.vcf.gz \
+    --a2-allele ${outdir}/a2_reference.txt \
+    --recode \
+    --out $outdir/${outfile}_phased_kk
 
- 
+
+
+# Compare sequences
+
+# brew info vcftools
+# export PERL5LIB=/usr/local/lib/perl5/site_perl:${PERL5LIB}
+awk '{printf "%s,", $1"_"$2}' $outdir/aDNA_samples
+vcf-subset -c 0_FOS66,0_FOS82,0_FOS102,0_FOS59,0_FOS105 $outdir/${outfile}.vcf.gz | \
+    bgzip -c > $outdir/${outfile}_aDNA.vcf.gz
+
+awk '{printf "%s,", $1"_"$2}' $outdir/rDNA_samples
+vcf-subset -c 0_OCP2,0_ME1076,0_OCP4,0_ME960,0_ME961 $outdir/${outfile}.vcf.gz | \
+    bgzip -c > $outdir/${outfile}_rDNA.vcf.gz
+
+tabix -p vcf $outdir/${outfile}_aDNA.vcf.gz
+tabix -p vcf $outdir/${outfile}_rDNA.vcf.gz
+
+vcf-compare  $outdir/${outfile}_aDNA.vcf.gz $outdir/${outfile}_rDNA.vcf.gz
+
+
+## LD
+# relationship matrix (not LD sensitive). Plot in R
+$bin_dir/plink_1.9_mac --sheep \
+    --bfile $outdir/$outfile \
+    --make-rel \
+    --out $outdir/${outfile}_LD
+    
+$bin_dir/plink_1.9_mac --sheep \
+    --bfile $outdir/$outfile \
+    --r2 --matrix \
+    --out $outdir/${outfile}_LD
+
+# LD between adjacent SNPs
+$bin_dir/plink_1.9_mac --sheep \
+    --bfile $outdir/$outfile \
+    --r2 --ld-window 2 --ld-window-kb 1000 --ld-window-r2 0 \
+    --out $outdir/${outfile}_LD2
+
+
+## PCA analysis
+# rscript
+$bin_dir/plink_1.9_mac --sheep \
+    --bfile $outdir/$outfile \
+    --pca \
+    --out $outdir/${outfile}_pca
+
+
+## ADMIXTURE
+$bin_dir/admixture $outdir/$outfile.bed 2
+# $bin_dir/admixture -B $outdir/$outfile.bed 2 -j3
+mv ${outfile}* $outdir/.
+
+# choose optimal K
+for k in {2..4}
+do 
+   $bin_dir/admixture --cv $outdir/$outfile.bed $k | tee $outdir/log_k$k
+done
+grep -h "CV" $outdir/log_k*
+rm ${outfile}.* 
+
+# consider LD
+# thin markers according to the obs. sample correlation coeffs.
+# output: a pruned subset of markers that are in approximate linkage 
+# equilibrium with each other
+# three parameters: a window size in variant count or kilobase, 
+# a variant count to shift the window at the end of each step, and 
+# a pairwise r2 threshold
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile $outdir/$outfile \
+    --indep-pairwise 50 10 0.1 \
+    --out $outdir/$outfile
+
+$bin_dir/plink_1.9_mac --noweb --sheep --bfile $outdir/$outfile \
+    --extract $outdir/$outfile.prune.in \
+    --make-bed \
+    --out $outdir/${outfile}_pruned
+
+$bin_dir/admixture $outdir/${outfile}_pruned.bed 2
+mv ${outfile}* $outdir/.
+
+
+
+## ROH
+$bin_dir/plink_1.9_mac --noweb --sheep \
+    --vcf $outdir/${outfile}.vcf.gz \
+    --homozyg \
+    --homozyg-window-snp 10 \
+    --homozyg-window-het 1 \
+    --homozyg-kb 1000 \
+    --homozyg-window-missing 2 \
+    --out $outdir/${outfile}_roh
+
+# with vcftools
+for chrom in {1..27}
+do
+vcftools --gzvcf $outdir/${outfile}.vcf.gz \
+    --chr $chrom \
+    --LROH \
+    --out $outdir/${outfile}_roh_$chrom
+done
+mv $outdir/${outfile}_roh_1.LROH $outdir/${outfile}_roh.LROH
+for chrom in {2..27}
+do
+   tail -n +2 -q $outdir/${outfile}_roh_${chrom}.LROH >> $outdir/${outfile}_roh.LROH
+done
+rm $outdir/${outfile}_roh_*
+
+
+
+## CNV
+
+
+
+## SEQUENCES
+# Another VCF example
+zless data/VCF/all.fb.cf.gz
+wc -l data/VCF/all.fb.vcf.gz
+vcftools --gzvcf data/VCF/all.fb.vcf.gz \
+    --chr 18 --chr 20 \
+    --remove-filtered-all --remove-indels \
+    --max-alleles 2 \
+    --recode \
+    --out data/VCF/onlysnps
+    
+gzip data/VCF/onlysnps.recode.vcf
+
+$bin_dir/plink_1.9_mac --cow \
+    --vcf data/VCF/onlysnps.recode.vcf.gz \
+    --allow-extra-chr 0 --biallelic-only strict list \
+    --vcf-filter \
+    --recode \
+    --out data/VCF/SNPS2plink
+
+awk '{print $1}' data/VCF/SNPS2plink.map | sort | uniq -c
+head data/VCF/SNPS2plink.ped | cut -d' ' -f1-18
+
 
 echo ""
-echo "\n  Manchega_pipeline_V0.1.sf finished"
+echo "\n  pipeline finished"
 echo ""
 
 ### EOF
